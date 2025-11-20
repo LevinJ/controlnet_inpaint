@@ -1,5 +1,7 @@
 .idea/
 data/
+models/
+.vscode/
 
 training/
 lightning_logs/
