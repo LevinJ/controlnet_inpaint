@@ -26,6 +26,8 @@ def visualize_annotations_directly(images_dir, labels_dir, output_dir, select_cl
         image_files.extend(glob.glob(os.path.join(images_dir, extension)))
 
     print(f"找到 {len(image_files)} 张图像")
+    # 对图像文件进行排序
+    image_files.sort()
 
     # 类别颜色（可以根据需要修改）
     class_colors = [
@@ -40,6 +42,7 @@ def visualize_annotations_directly(images_dir, labels_dir, output_dir, select_cl
     # 处理每张图像
     for image_path in image_files:
         # 读取图像
+        print(f"Processing image: {image_path}")
         image = cv2.imread(image_path)
         if image is None:
             print(f"无法读取图像: {image_path}")
@@ -70,7 +73,8 @@ def visualize_annotations_directly(images_dir, labels_dir, output_dir, select_cl
                 class_id, x_center, y_center, width, height = map(float, line.split())
 
                 # if int(class_id) in [1, 3, 5, 6, 8, 10, 11, 12, 14, 16, 18, 20, 22]:
-                if int(class_id) == select_class:
+                if True:
+                # if int(class_id) == select_class:
                     # 转换为像素坐标
                     x_center *= img_width
                     y_center *= img_height
@@ -93,33 +97,63 @@ def visualize_annotations_directly(images_dir, labels_dir, output_dir, select_cl
                     color = class_colors[int(class_id) % len(class_colors)]
 
                     # 绘制边界框
-                    # cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+                    cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
 
                     # 添加类别标签
-                    label = f"Class {int(class_id)}"
+                    # label = f"Class {int(class_id)}"
+                    label = f"{class_id_to_name[int(class_id)]}"
                     label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                    # cv2.rectangle(image, (x1, y1 - label_size[1] - 10),
-                    #               (x1 + label_size[0], y1), color, -1)
-                    # cv2.putText(image, label, (x1, y1 - 5),
-                    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                    cv2.rectangle(image, (x1, y1 - label_size[1] - 10),
+                                  (x1 + label_size[0], y1), color, -1)
+                    cv2.putText(image, label, (x1, y1 - 5),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
                     cropped_image = image[y1:y2, x1:x2]
 
                     # save_dir = output_dir + '/' + str(label)
                     # 保存可视化结果
-                    output_path = os.path.join(output_dir, Path(image_path).name)
+                    # output_path = os.path.join(output_dir, Path(image_path).name)
                     # cv2.imwrite(output_path, image)
-                    cv2.imwrite(output_path, cropped_image)
-                    print(f"已保存: {output_path}")
+                    # cv2.imwrite(output_path, cropped_image)
+                    # print(f"已保存: {output_path}")
                 else:
                     pass
-
+            
             except Exception as e:
                 print(f"处理标注时出错 {label_path}: {e}")
                 continue
+       
+        cv2.imshow("Annotated Image", image)
+        cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 # Classes
+class_id_to_name = {
+    0: "Actuator_ok",
+    1: "Actuator_breakage",
+    2: "Actuator_pin_ok",
+    3: "Actuator_pin_breakage",
+    4: "Piston_ok",
+    5: "Piston_oil",
+    6: "Piston_breakage",
+    7: "Screw_ok",
+    8: "Screw_untightened",
+    9: "Guiderod_ok",
+    10: "Guiderod_oil",
+    11: "Guiderod_malposed",
+    12: "surface_scratch",
+    13: "Spring_ok",
+    14: "Spring_variant",
+    15: "Marker_ok",
+    16: "Marker_breakage",
+    17: "Line_ok",
+    18: "Line_unaligned",
+    19: "Exhaust_screw_ok",
+    20: "Exhaust_screw_abnormal",
+    21: "Support_surface_ok",
+    22: "Support_surface_scratch"
+}
 #names:
 #  0: Actuator_ok
 #  1: Actuator_breakage
@@ -146,9 +180,9 @@ def visualize_annotations_directly(images_dir, labels_dir, output_dir, select_cl
 #  22: Support_surface_scratch
 
 # 使用方法
-images_directory = "/home/vincent/Documents/Wuhan-Factory/ControlNet/data/images/right"  # 替换为你的图像目录
-labels_directory = "/home/vincent/Documents/Wuhan-Factory/ControlNet/data/labels/right"  # 替换为你的标注文件目录
-save_directory = '/home/vincent/Documents/Wuhan-Factory/ControlNet/data/data_save/1'
-select_class = int(13)
+images_directory = "./data/images/bottom"  # 替换为你的图像目录
+labels_directory = "./data/labels/bottom"  # 替换为你的标注文件目录
+save_directory = './data/data_save/1'
+select_class = int(10)  # 替换为你想要可视化的类别ID
 
 visualize_annotations_directly(images_directory, labels_directory, save_directory, select_class)

@@ -57,11 +57,11 @@ def generate_image_pairs_advanced(source_root_dir, target_root_dir, output_json_
                             image_pairs.append(pair)
 
 
-    # 保存结果
-    with open(output_json_path, 'w', encoding='utf-8') as f:
-        for pair in image_pairs:
-            json_line = json.dumps(pair, ensure_ascii=False)
-            f.write(json_line + '\n')
+    # # 保存结果
+    # with open(output_json_path, 'w', encoding='utf-8') as f:
+    #     for pair in image_pairs:
+    #         json_line = json.dumps(pair, ensure_ascii=False)
+    #         f.write(json_line + '\n')
 
     return image_pairs
 
@@ -75,11 +75,11 @@ if __name__ == "__main__":
     # 自定义prompt模板的用法
     custom_prompt = "screw untightened from bottom angle"
 
-    output_file = "/home/vincent/Documents/Wuhan-Factory/ControlNet/training/fill50k/prompt_bottom_screw_untightened.json"
+    output_file = "./training/fill50k/prompt_bottom_screw_untightened.json"
 
-    source_dir = '/home/vincent/Documents/Wuhan-Factory/ControlNet/training/fill50k/source/bottom_screw_ok'
+    source_dir = './training/fill50k/source/bottom_screw_ok'
 
-    target_dir = "/home/vincent/Documents/Wuhan-Factory/ControlNet/training/fill50k/target/bottom_Screw_untightened"
+    target_dir = "./training/fill50k/target/bottom_Screw_untightened"
 
 
     pairs_custom = generate_image_pairs_advanced(
