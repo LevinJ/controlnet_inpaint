@@ -9,8 +9,10 @@ from cldm.model import create_model, load_state_dict
 
 # Configs
 #resume_path = '/home/vincent/Documents/yq/control_sd15_finetune.ckpt'
-resume_path = './models/control_sd15_ini.ckpt'
-batch_size = 2
+# resume_path = './models/control_sd15_ini.ckpt'
+resume_path = './lightning_logs/version_0/checkpoints/epoch=57-step=92393.ckpt'
+
+batch_size = 64
 logger_freq = 300
 learning_rate = 1e-5
 sd_locked = True
