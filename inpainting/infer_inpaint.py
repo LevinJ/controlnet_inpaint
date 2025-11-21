@@ -26,7 +26,9 @@ class InferenceInpaint:
         model_name = 'control_v11p_sd15_inpaint'
         model = create_model(f'./models/{model_name}.yaml').cpu()
         model.load_state_dict(load_state_dict('./models/v1-5-pruned.ckpt', location='cuda'), strict=False)
-        model.load_state_dict(load_state_dict(f'./models/{model_name}.pth', location='cuda'), strict=False)
+        # model_path = f'./models/{model_name}.pth'
+        model_path = './lightning_logs/version_7/checkpoints/epoch=110-step=16649.ckpt'
+        model.load_state_dict(load_state_dict(model_path, location='cuda'), strict=False)
         model = model.cuda()
         ddim_sampler = DDIMSampler(model)
 
@@ -34,9 +36,11 @@ class InferenceInpaint:
         self.ddim_sampler = ddim_sampler
         return
     def run(self):
-        prompt = "oil"
+        prompt = "Guiderod malposed, bottom viewpoint"
+        # prompt = "Guiderod ok, bottom viewpoint"
         a_prompt = 'best quality, extremely detailed'
-        n_prompt = 'lowres, bad anatomy, bad hands, cropped, worst quality'
+        # n_prompt = 'lowres, bad anatomy, bad hands, cropped, worst quality'
+        n_prompt = ''
         num_samples = 1
         image_resolution = 512
         ddim_steps = 20
@@ -51,9 +55,9 @@ class InferenceInpaint:
         input_image_and_mask['image'] = None 
         input_image_and_mask['mask'] = None
 
-        img_name = '20250303_163624_4c3b29c3-254b-4f6c-9e13-a5ab6c85f377.jpg'
+        img_name = '20250303_163548_9bf8425a-dc21-4449-8b8f-546f277613d7.jpg'
         image_path = f"./data/images/bottom/{img_name}"
-        mask = [470,586,247,389]
+        mask = [474, 603, 1249, 1412]
 
         input_image_and_mask['image'] = imageio.imread(image_path) 
         if input_image_and_mask['image'].ndim == 2:
@@ -62,6 +66,8 @@ class InferenceInpaint:
             input_image_and_mask['image'] = input_image_and_mask['image'][..., :3]
         input_image_and_mask['mask'] = np.zeros_like(input_image_and_mask['image'], dtype=np.uint8) 
         input_image_and_mask['mask'][mask[0]:mask[1], mask[2]:mask[3], :] = 255
+
+        input_image_and_mask['image'][mask[0]:mask[1], mask[2]:mask[3], :] = -255
         
         self.init_model()
         res = self.process(input_image_and_mask, prompt, a_prompt, n_prompt, num_samples, image_resolution, ddim_steps, guess_mode, strength, scale, seed, eta, mask_blur)
@@ -88,40 +94,26 @@ class InferenceInpaint:
         titles=None
         ):
         """
-        Display the whole pipeline in one figure.
+        Display the whole pipeline in a fixed 4-column, multiple-row layout.
         `output_images` can be a single image or a list / NumPy array of images
-        (length = num_samples).  All images are shown in a single row.
+        (length = num_samples). All images are shown in a grid.
         """
-        # make sure we have a list of outputs
         num_samples = len(output_images)
-        total_cols = 4 + num_samples          # input_image | input_mask | mask_pixel | detected_map | outputs …
-        fig, axes = plt.subplots(1, total_cols, figsize=figsize)
-        if total_cols == 1:                   # plt.subplots behaviour when ncols=1
-            axes = [axes]
-
-        def _imshow(ax, img, title, cmap=None):
-            if len(img.shape) == 2:           # 2-D → grayscale
-                ax.imshow(img, cmap=cmap or 'gray')
-            else:                             # 3-D
-                ax.imshow(img)
-            ax.set_title(title)
-            ax.axis('off')
-        # default titles
+        images = [input_image, input_mask, mask_pixel, detected_map] + list(output_images)
         if titles is None:
-            titles = ['input_image', 'input_mask', 'mask_pixel', 'detected_map'] + \
-                    [f'output_{i}' for i in range(num_samples)]
-
-
-        # first four fixed images
-        _imshow(axes[0], input_image, titles[0])
-        _imshow(axes[1], input_mask,  titles[1])
-        _imshow(axes[2], mask_pixel,  titles[2])
-        _imshow(axes[3], detected_map, titles[3], cmap=cmap_detected)
-
-        # variable number of output images
-        for idx, out_img in enumerate(output_images):
-            _imshow(axes[4 + idx], out_img, titles[4 + idx])
-
+            titles = ['input_image', 'input_mask', 'mask_pixel', 'detected_map'] + [f'output_{i}' for i in range(num_samples)]
+        total_images = len(images)
+        cols = 4
+        rows = (total_images + cols - 1) // cols
+        plt.figure(figsize=(4 * cols, 4 * rows))
+        for idx, (img, title) in enumerate(zip(images, titles)):
+            plt.subplot(rows, cols, idx + 1)
+            if img.ndim == 2:
+                plt.imshow(img, cmap='gray')
+            else:
+                plt.imshow(img)
+            plt.title(title)
+            plt.axis('off')
         plt.tight_layout()
         plt.show()
 
