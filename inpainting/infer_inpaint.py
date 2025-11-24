@@ -36,12 +36,13 @@ class InferenceInpaint:
         self.ddim_sampler = ddim_sampler
         return
     def run(self):
-        prompt = "Guiderod malposed, bottom viewpoint"
+        # prompt = "Guiderod malposed, bottom viewpoint"
         # prompt = "Guiderod ok, bottom viewpoint"
+        prompt = "Guiderod oil, bottom viewpoint"
         a_prompt = 'best quality, extremely detailed'
         # n_prompt = 'lowres, bad anatomy, bad hands, cropped, worst quality'
         n_prompt = ''
-        num_samples = 1
+        num_samples = 2
         image_resolution = 512
         ddim_steps = 20
         guess_mode = False
@@ -55,9 +56,15 @@ class InferenceInpaint:
         input_image_and_mask['image'] = None 
         input_image_and_mask['mask'] = None
 
+        # img_name = '20250303_163624_4c3b29c3-254b-4f6c-9e13-a5ab6c85f377.jpg'
+        # mask = [470, 586, 247, 389]
+
         img_name = '20250303_163548_9bf8425a-dc21-4449-8b8f-546f277613d7.jpg'
-        image_path = f"./data/images/bottom/{img_name}"
         mask = [474, 603, 1249, 1412]
+
+
+        image_path = f"./data/images/bottom/{img_name}"
+        
 
         input_image_and_mask['image'] = imageio.imread(image_path) 
         if input_image_and_mask['image'].ndim == 2:
@@ -67,12 +74,14 @@ class InferenceInpaint:
         input_image_and_mask['mask'] = np.zeros_like(input_image_and_mask['image'], dtype=np.uint8) 
         input_image_and_mask['mask'][mask[0]:mask[1], mask[2]:mask[3], :] = 255
 
+        input_image_and_mask['orig_image'] = input_image_and_mask['image'].copy()
         input_image_and_mask['image'][mask[0]:mask[1], mask[2]:mask[3], :] = -255
         
         self.init_model()
         res = self.process(input_image_and_mask, prompt, a_prompt, n_prompt, num_samples, image_resolution, ddim_steps, guess_mode, strength, scale, seed, eta, mask_blur)
         input_image, input_mask, mask_pixel, detected_map, output_images = res 
         self.show_pipe_result(
+            mask,
             input_image,
             input_mask,
             mask_pixel,
@@ -84,8 +93,9 @@ class InferenceInpaint:
 
         return
     def show_pipe_result(self,
+        mask,
         input_image,          # (H, W, 3)   or  (H, W)
-        input_mask,           # (H, W)      mask for the input
+        orig_image,           # (H, W)      mask for the input
         mask_pixel,           # (H, W, 3)   or  (H, W)
         detected_map,         # (H, W)      e.g. canny / depth / pose …
         output_images,        # list/array  length = num_samples  (each (H, W, 3) or (H, W))
@@ -99,21 +109,35 @@ class InferenceInpaint:
         (length = num_samples). All images are shown in a grid.
         """
         num_samples = len(output_images)
-        images = [input_image, input_mask, mask_pixel, detected_map] + list(output_images)
+        images = [orig_image, input_image, mask_pixel, detected_map] + list(output_images)
         if titles is None:
-            titles = ['input_image', 'input_mask', 'mask_pixel', 'detected_map'] + [f'output_{i}' for i in range(num_samples)]
+            titles = ['orig_image', 'input_image', 'mask_pixel', 'detected_map'] + [f'output_{i}' for i in range(num_samples)]
         total_images = len(images)
         cols = 4
         rows = (total_images + cols - 1) // cols
         plt.figure(figsize=(4 * cols, 4 * rows))
+        # Get reference size from the first image
+        ref_shape = images[0].shape[:2]  # (height, width)
         for idx, (img, title) in enumerate(zip(images, titles)):
-            plt.subplot(rows, cols, idx + 1)
+            # Resize images in the second row and later
+            if idx >= cols:
+                if img.shape[:2] != ref_shape:
+                    if img.ndim == 2:
+                        img = cv2.resize(img, (ref_shape[1], ref_shape[0]), interpolation=cv2.INTER_LINEAR)
+                    else:
+                        img = cv2.resize(img, (ref_shape[1], ref_shape[0]), interpolation=cv2.INTER_LINEAR)
+            ax = plt.subplot(rows, cols, idx + 1)
             if img.ndim == 2:
-                plt.imshow(img, cmap='gray')
+                ax.imshow(img, cmap='gray')
             else:
-                plt.imshow(img)
-            plt.title(title)
-            plt.axis('off')
+                ax.imshow(img)
+            # Draw blue rectangle on images in the second row and later
+            if idx >= cols:
+                y1, y2, x1, x2 = mask
+                rect_blue = plt.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor='blue', facecolor='none', linewidth=2)
+                ax.add_patch(rect_blue)
+            ax.set_title(title)
+            ax.axis('off')
         plt.tight_layout()
         plt.show()
 
@@ -187,7 +211,7 @@ class InferenceInpaint:
             x_samples = x_samples * mask_pixel_batched + img_pixel_batched * (1.0 - mask_pixel_batched)
 
             results = [x_samples[i].clip(0, 255).astype(np.uint8) for i in range(num_samples)]
-            return [input_image, input_mask, mask_pixel] + [detected_map.clip(0, 255).astype(np.uint8)] + [results]
+            return [input_image, input_image_and_mask['orig_image'], mask_pixel] + [detected_map.clip(0, 255).astype(np.uint8)] + [results]
 
 if __name__ == "__main__":
     infer_inpaint = InferenceInpaint()
