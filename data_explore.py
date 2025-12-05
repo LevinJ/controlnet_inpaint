@@ -134,24 +134,24 @@ class AnnotationVisualizerGUI:
         skip_btn = ttk.Button(btn_frame, text="Skip", command=self._skip_to_image)
         skip_btn.grid(row=0, column=4, padx=5)
 
-        self.image_label.bind('<Button-1>', self._popup_matplotlib)
+        # self.image_label.bind('<Button-1>', self._popup_matplotlib)
         root.bind('<Up>', lambda event: self._prev_image())
         root.bind('<Down>', lambda event: self._next_image())
-        self.skip_entry.bind('<Return>', lambda event: self._skip_to_image())
+        # self.skip_entry.bind('<Return>', lambda event: self._skip_to_image())
         self._show_image()
         root.mainloop()
 
-    def _popup_matplotlib(self, event):
-        import matplotlib.pyplot as plt
-        img = self._get_annotated_image(self.current_index)
-        if img is None:
-            return
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        plt.figure(figsize=(10, 8))
-        plt.imshow(img_rgb)
-        plt.title(f"Image {self.current_index + 1}: {self.image_files[self.current_index]}")
-        plt.axis('off')
-        plt.show()
+    # def _popup_matplotlib(self, event):
+    #     import matplotlib.pyplot as plt
+    #     img = self._get_annotated_image(self.current_index)
+    #     if img is None:
+    #         return
+    #     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    #     plt.figure(figsize=(10, 8))
+    #     plt.imshow(img_rgb)
+    #     plt.title(f"Image {self.current_index + 1}: {self.image_files[self.current_index]}")
+    #     plt.axis('off')
+    #     plt.show()
 
     def _show_image(self):
         img = self._get_annotated_image(self.current_index)

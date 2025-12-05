@@ -5,6 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from annotator.util import resize_image
 import matplotlib.pyplot as plt
+from collections import Counter
 
 
 class DefectDataset(Dataset):
@@ -15,6 +16,8 @@ class DefectDataset(Dataset):
         #         self.data.append(json.loads(line))
         with open('./data/data_save/inpaint_prompt_bottom.json', 'r') as f:
             self.data = json.load(f)
+        # Filter out entries with unwanted prompt
+        self.data = [entry for entry in self.data if entry.get('prompt') != 'Guiderod ok, bottom viewpoint']
 
     def __len__(self):
         return len(self.data)
@@ -61,7 +64,17 @@ if __name__ == "__main__":
     print("prompt:", sample['txt'])
     print("Displaying sample images...")
 
-    
+    # --- Prompt statistics ---
+    prompt_counter = Counter()
+    for i in range(len(dataset)):
+        prompt = dataset[i]['txt']
+        prompt_counter[prompt] += 1
+    print("\nPrompt statistics:")
+    print(f"Total unique prompts: {len(prompt_counter)}")
+    for prompt, count in prompt_counter.most_common():
+        print(f"'{prompt}': {count}")
+    print()
+    # --- End prompt statistics ---
 
     plt.figure(figsize=(10, 5))
 
