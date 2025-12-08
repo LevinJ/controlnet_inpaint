@@ -57,7 +57,6 @@ class AnnotationVisualizerGUI:
         self.image_files = self._get_image_files()
         self.total_images = len(self.image_files)
         self.current_index = 0
-        self.annotated_images = [None] * self.total_images
         self.selected_bbox_idx = None
         self.annotation_edit_box = None
 
@@ -116,10 +115,8 @@ class AnnotationVisualizerGUI:
         return image
 
     def _get_annotated_image(self, idx):
-        if self.annotated_images[idx] is None:
-            img = self._annotate_image(self.image_files[idx])
-            self.annotated_images[idx] = img
-        return self.annotated_images[idx]
+        img = self._annotate_image(self.image_files[idx])
+        return img
 
     def run(self):
         self.root = tk.Tk()
@@ -184,10 +181,8 @@ class AnnotationVisualizerGUI:
         self.index_label.config(text=f"Image {self.current_index + 1}/{self.total_images}")
         self.info_label.config(text=f"Path: {self.image_files[self.current_index]}")
         print(f"Showing image {self.current_index + 1}/{self.total_images}: {self.image_files[self.current_index]}")
-        # If annotation edit box exists, update its position
-        if self.selected_bbox_idx is not None:
-            self._show_annotation_edit_box()
-
+        self._hide_annotation_edit_box()
+        return
 
     def _show_annotation_edit_box(self):
         if self.annotation_edit_box:
@@ -217,7 +212,6 @@ class AnnotationVisualizerGUI:
         self.annotations[self.selected_bbox_idx] = new_ann
         self._hide_annotation_edit_box()
         self._save_annotations_to_file()
-        self.annotated_images[self.current_index] = None  # Clear cache for current image
         self._show_image()
 
     def _save_annotations_to_file(self):
