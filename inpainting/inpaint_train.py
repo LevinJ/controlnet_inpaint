@@ -39,13 +39,13 @@ model.only_mid_control = only_mid_control
 
 
 # Misc
-checkpoint_callback = ModelCheckpoint(
-    dirpath="checkpoints",
-    filename="epoch{epoch:02d}-step{step}",
-    save_top_k=-1,  # save all
-    every_n_epochs=5,
-    save_last=True
-)
+# checkpoint_callback = ModelCheckpoint(
+#     dirpath="checkpoints",
+#     filename="epoch{epoch:02d}-step{step}",
+#     save_top_k=-1,  # save all
+#     every_n_epochs=5,
+#     save_last=True
+# )
 
 dataset = MyDataset()
 dataloader = DataLoader(dataset, num_workers=0, batch_size=batch_size, shuffle=True)
@@ -53,9 +53,9 @@ logger = ImageLogger(batch_frequency=logger_freq)
 trainer = pl.Trainer(
     gpus=1,
     precision=32,
-    callbacks=[logger, checkpoint_callback],
+    callbacks=[logger],
     accumulate_grad_batches=4,
-    max_epochs=10  # <-- set number of epochs here
+    max_epochs=100  # <-- set number of epochs here
 )
 
 

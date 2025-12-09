@@ -93,6 +93,9 @@ def visualize_annotations_directly(images_dir, labels_dir, output_dir, select_cl
                     x2 = min(img_width - 1, x2)
                     y2 = min(img_height - 1, y2)
 
+                    # if x1 > img_width/2:
+                    #     continue
+
                     # 选择颜色
                     color = class_colors[int(class_id) % len(class_colors)]
 
