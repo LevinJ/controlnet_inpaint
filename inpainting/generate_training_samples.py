@@ -5,8 +5,36 @@ from pathlib import Path
 # Import class_id_to_name from data_explore2.py
 from inpainting.data_explore2 import class_id_to_name
 import cv2
+import numpy as np
 
 class TrainingSampleGenerator:
+    def process_annotation_jsons(self, json_file_list):
+        import shutil
+        json_dir = os.path.join(self.output_dir, "temp/wuhan_fac")
+        for json_path in json_file_list:
+            with open(json_path, 'r') as f:
+                annotations = json.load(f)
+            # Get mask_type from file name
+            json_file = os.path.basename(json_path)
+            mask_type = json_file.replace('_annotations.json', '')
+            image_save_dir = os.path.join(json_dir, mask_type)
+            mask_save_dir = os.path.join(json_dir, f"{mask_type}_mask")
+            os.makedirs(image_save_dir, exist_ok=True)
+            os.makedirs(mask_save_dir, exist_ok=True)
+            for anno in annotations:
+                image_path = anno['image_path']
+                mask_coords = anno['mask']
+                image_name = os.path.basename(image_path)
+                # Copy image to image_save_dir
+                shutil.copy(image_path, os.path.join(image_save_dir, image_name))
+                # Generate mask image
+                img = cv2.imread(image_path)
+                assert img is not None, f"Failed to load image: {image_path}"
+                mask_img = np.zeros_like(img)
+                x1, x2, y1, y2 = mask_coords['x1'], mask_coords['x2'], mask_coords['y1'], mask_coords['y2']
+                mask_img[int(y1):int(y2), int(x1):int(x2)] = (255, 255, 255)
+                mask_name = f"{Path(image_name).stem}_mask.png"
+                cv2.imwrite(os.path.join(mask_save_dir, mask_name), mask_img)
     def __init__(self, images_dir, labels_dir, anno_dict, output_dir):
         self.images_dir = images_dir
         self.labels_dir = labels_dir
@@ -62,6 +90,7 @@ class TrainingSampleGenerator:
 
     def generate(self):
         image_files = self.collect_image_files()
+        created_json_files = []
         for mask_type, idx_list in self.anno_dict.items():
             # Convert mask_type to string name
             mask_type_str = class_id_to_name.get(mask_type, str(mask_type))
@@ -76,11 +105,10 @@ class TrainingSampleGenerator:
                 img = cv2.imread(image_path)
                 assert img is not None, f"Failed to load image: {image_path}"
                 img_height, img_width = img.shape[:2]
-                
                 boxes = self.parse_label_file(label_path, mask_type)
                 mask_coords = self.get_mask_coordinates(boxes, img_width, img_height)
                 annotations.append({
-                    'image_path': image_path,
+                    'image_path': os.path.abspath(image_path),
                     'mask_type': mask_type_str,
                     'mask': mask_coords
                 })
@@ -88,6 +116,10 @@ class TrainingSampleGenerator:
             json_path = os.path.join(save_dir, f"{mask_type_str}_annotations.json")
             with open(json_path, 'w') as f:
                 json.dump(annotations, f, indent=2)
+            created_json_files.append(json_path)
+        # Call the new method to process annotation jsons
+        self.process_annotation_jsons(created_json_files)
+        
 
 if __name__ == "__main__":
     images_directory = "./data/images/bottom"
