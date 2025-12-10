@@ -184,10 +184,12 @@ class_id_to_name = {
 #  21: Support_surface_ok
 #  22: Support_surface_scratch
 
-# 使用方法
-images_directory = "./data/images/bottom"  # 替换为你的图像目录
-labels_directory = "./data/labels/bottom"  # 替换为你的标注文件目录
-save_directory = './data/data_save/1'
-select_class = int(11)  # 替换为你想要可视化的类别ID
 
-visualize_annotations_directly(images_directory, labels_directory, save_directory, select_class)
+if __name__ == "__main__":
+    # 使用方法
+    images_directory = "./data/images/bottom"  # 替换为你的图像目录
+    labels_directory = "./data/labels/bottom"  # 替换为你的标注文件目录
+    save_directory = './data/data_save/1'
+    select_class = int(11)  # 替换为你想要可视化的类别ID
+
+    visualize_annotations_directly(images_directory, labels_directory, save_directory, select_class)

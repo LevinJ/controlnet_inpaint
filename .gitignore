@@ -2,6 +2,7 @@
 data/
 models/
 .vscode/
+temp/
 
 training/
 lightning_logs/
