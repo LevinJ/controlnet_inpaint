@@ -45,9 +45,11 @@ class DefectDataset(Dataset):
         # modification for self dataset
         # source = cv2.resize(source, (512, 512))
         # source = cv2.resize(source, (512, 512))
-        image_resolution = 512
-        source = resize_image(source, image_resolution)
-        target = resize_image(target, image_resolution)
+        # image_resolution = 512
+        # source = resize_image(source, image_resolution)
+        # target = resize_image(target, image_resolution)
+        source = cv2.resize(source, (896, 512), interpolation=cv2.INTER_LANCZOS4)
+        target = cv2.resize(target, (896, 512), interpolation=cv2.INTER_LANCZOS4)
 
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0
