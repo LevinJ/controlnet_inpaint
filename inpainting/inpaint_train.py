@@ -1,3 +1,8 @@
+import sys
+import os
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 from share import *
 
 import pytorch_lightning as pl
@@ -7,6 +12,7 @@ from cldm.logger import ImageLogger
 from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 from pytorch_lightning.callbacks import ModelCheckpoint
+
 
 # Configs
 #resume_path = '/home/vincent/Documents/yq/control_sd15_finetune.ckpt'
