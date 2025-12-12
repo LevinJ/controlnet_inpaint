@@ -100,15 +100,11 @@ class inpaint_prompt(object):
     def process_image_and_labels(self, image_path, labels_dir, select_class, json_data):
         print(f"Processing image: {image_path}")
         image = cv2.imread(image_path)
-        if image is None:
-            print(f"无法读取图像: {image_path}")
-            return
+        assert image is not None, f"无法读取图像: {image_path}"
 
         img_height, img_width = image.shape[:2]
         label_path = os.path.join(labels_dir, Path(image_path).stem + ".txt")
-        if not os.path.exists(label_path):
-            print(f"未找到标注文件: {label_path}")
-            return
+        assert os.path.exists(label_path), f"未找到标注文件: {label_path}"
 
         with open(label_path, 'r') as f:
             lines = f.readlines()
@@ -136,7 +132,8 @@ class inpaint_prompt(object):
             json_item = {
                 "image_path": image_path,
                 "mask": mask,
-                "prompt": prompt
+                "prompt": prompt,
+                "class_id": int(class_id)
             }
             json_data.append(json_item)
         
@@ -144,15 +141,19 @@ class inpaint_prompt(object):
        
     def run(self):
         # 使用方法
-        view_angle = 'bottom'
-        images_directory = f"./data/images/{view_angle}"  # 替换为你的图像目录
-        labels_directory = f"./data/labels/{view_angle}"  # 替换为你的标注文件目录
-        save_directory = f"./data/data_save"
-        select_class = [9, 10, 11]
+        # view_angle = 'bottom'
+        # images_directory = f"./data/images/{view_angle}"  # 替换为你的图像目录
+        # labels_directory = f"./data/labels/{view_angle}"  # 替换为你的标注文件目录
+        view_angles = ['bottom', 'left', 'top', 'right', 'front', 'back']
+        for view_angle in view_angles:
+            images_directory = f"./data/21.02.2025/{view_angle}"  # Replace with your image directory
+            labels_directory = f"./data/21.02.2025/label/21.02.2025-txt/{view_angle}"  # Replace with your annotation file directory
+            save_directory = f"./data/data_save"
+            select_class = np.arange(0, 23).tolist()  # 选择所有类别
 
-        self.view_angle = view_angle
+            self.view_angle = view_angle
 
-        self.gen_inpaint_prompt(images_directory, labels_directory, save_directory, select_class)
+            self.gen_inpaint_prompt(images_directory, labels_directory, save_directory, select_class)
         return
 
 if __name__ == "__main__":

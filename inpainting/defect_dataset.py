@@ -14,10 +14,14 @@ class DefectDataset(Dataset):
         # with open('./training/fill50k/prompt.json', 'rt') as f:
         #     for line in f:
         #         self.data.append(json.loads(line))
-        with open('./data/data_save/inpaint_prompt_bottom.json', 'r') as f:
+        with open('./data/data_save/inpaint_prompt.json', 'r') as f:
             self.data = json.load(f)
-        # Filter out entries with unwanted prompt
-        self.data = [entry for entry in self.data if entry.get('prompt') != 'Guiderod ok, bottom viewpoint']
+        # Hardcoded unwanted prompts
+        # unwanted_prompts = [
+        #     'Guiderod ok, bottom viewpoint',
+        #     'Guiderod malposed, bottom viewpoint'
+        # ]
+        # self.data = [entry for entry in self.data if entry.get('prompt') not in unwanted_prompts]
 
     def __len__(self):
         return len(self.data)

@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 # resume_path = './lightning_logs/version_0/checkpoints/epoch=57-step=92393.ckpt'
 
 batch_size = 1
-logger_freq = 100
+logger_freq = 300
 learning_rate = 1e-5
 sd_locked = True
 only_mid_control = False
@@ -39,13 +39,13 @@ model.only_mid_control = only_mid_control
 
 
 # Misc
-# checkpoint_callback = ModelCheckpoint(
-#     dirpath="checkpoints",
-#     filename="epoch{epoch:02d}-step{step}",
-#     save_top_k=-1,  # save all
-#     every_n_epochs=5,
-#     save_last=True
-# )
+checkpoint_callback = ModelCheckpoint(
+    dirpath="checkpoints",
+    filename="epoch{epoch:02d}-step{step}",
+    save_top_k=-1,  # save all
+    every_n_epochs=100,
+    save_last=True
+)
 
 dataset = MyDataset()
 dataloader = DataLoader(dataset, num_workers=0, batch_size=batch_size, shuffle=True)
@@ -53,9 +53,9 @@ logger = ImageLogger(batch_frequency=logger_freq)
 trainer = pl.Trainer(
     gpus=1,
     precision=32,
-    callbacks=[logger],
+    callbacks=[logger, checkpoint_callback],
     accumulate_grad_batches=4,
-    max_epochs=100  # <-- set number of epochs here
+    max_epochs=500  # <-- set number of epochs here
 )
 
 

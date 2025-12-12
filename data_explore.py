@@ -253,8 +253,11 @@ class AnnotationVisualizerGUI:
 
 
 if __name__ == "__main__":
-    images_directory = "./data/images/bottom"  # Replace with your image directory
-    labels_directory = "./data/labels/bottom"  # Replace with your annotation file directory
+    view_angle = "left"
+    # images_directory = f"./data/images/{view_angle}"  # Replace with your image directory
+    # labels_directory = f"./data/labels/{view_angle}"  # Replace with your annotation file directory
+    images_directory = f"./data/21.02.2025/{view_angle}"  # Replace with your image directory
+    labels_directory = f"./data/21.02.2025/label/21.02.2025-txt/{view_angle}"  # Replace with your annotation file directory
     select_class = None  # Or set to an integer class id to filter
     visualizer_gui = AnnotationVisualizerGUI(images_directory, labels_directory, select_class)
     visualizer_gui.run()
