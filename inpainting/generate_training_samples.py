@@ -8,9 +8,17 @@ import cv2
 import numpy as np
 
 class TrainingSampleGenerator:
+    def __init__(self, images_dir, labels_dir, anno_dict, output_dir, view_angle):
+        self.images_dir = images_dir
+        self.labels_dir = labels_dir
+        self.anno_dict = anno_dict
+        self.output_dir = output_dir
+        self.view_angle = view_angle
+        os.makedirs(self.output_dir, exist_ok=True)
+
     def process_annotation_jsons(self, json_file_list):
         import shutil
-        json_dir = os.path.join(self.output_dir, "temp/wuhan_fac")
+        json_dir = os.path.join(self.output_dir, f"temp/wuhan_fac/{self.view_angle}")
         for json_path in json_file_list:
             with open(json_path, 'r') as f:
                 annotations = json.load(f)
@@ -35,12 +43,6 @@ class TrainingSampleGenerator:
                 mask_img[int(y1):int(y2), int(x1):int(x2)] = (255, 255, 255)
                 mask_name = f"{Path(image_name).stem}_mask.png"
                 cv2.imwrite(os.path.join(mask_save_dir, mask_name), mask_img)
-    def __init__(self, images_dir, labels_dir, anno_dict, output_dir):
-        self.images_dir = images_dir
-        self.labels_dir = labels_dir
-        self.anno_dict = anno_dict
-        self.output_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
 
     def collect_image_files(self):
         image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp']
@@ -94,7 +96,7 @@ class TrainingSampleGenerator:
         for mask_type, idx_list in self.anno_dict.items():
             # Convert mask_type to string name
             mask_type_str = class_id_to_name.get(mask_type, str(mask_type))
-            save_dir = os.path.join(self.output_dir, "temp/wuhan_fac")
+            save_dir = os.path.join(self.output_dir, f"temp/wuhan_fac/{self.view_angle}")
             os.makedirs(save_dir, exist_ok=True)
             annotations = []
             for idx in idx_list:
@@ -122,9 +124,11 @@ class TrainingSampleGenerator:
         
 
 if __name__ == "__main__":
-    images_directory = "./data/images/bottom"
-    labels_directory = "./data/labels/bottom"
-    anno_dict = {11: [17, 47, 69], 10: [6, 11, 15]}
+    view_angle = "bottom"
+    images_directory = f"./data/images/{view_angle}"
+    labels_directory = f"./data/labels/{view_angle}"
+    anno_dict = {9: [2]}
+    # anno_dict = {11: [17, 47, 69], 10: [6, 11, 15]}
     output_dir = os.path.dirname(os.path.abspath(__file__))
-    generator = TrainingSampleGenerator(images_directory, labels_directory, anno_dict, output_dir)
+    generator = TrainingSampleGenerator(images_directory, labels_directory, anno_dict, output_dir, view_angle)
     generator.generate()

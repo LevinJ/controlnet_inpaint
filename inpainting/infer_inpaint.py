@@ -15,6 +15,7 @@ from cldm.ddim_hacked import DDIMSampler
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 
 
@@ -28,7 +29,8 @@ class InferenceInpaint:
         model.load_state_dict(load_state_dict('./models/v1-5-pruned.ckpt', location='cuda'), strict=False)
         # model_path = f'./models/{model_name}.pth'
         # model_path = './lightning_logs/version_7/checkpoints/epoch=110-step=16649.ckpt'
-        model_path = './lightning_logs/version_9/checkpoints/epoch=99-step=4099.ckpt'
+        # model_path = './lightning_logs/version_9/checkpoints/epoch=99-step=4099.ckpt'
+        model_path = './lightning_logs/version_10/checkpoints/epochepoch=199-stepstep=1999.ckpt'
         model.load_state_dict(load_state_dict(model_path, location='cuda'), strict=False)
         model = model.cuda()
         ddim_sampler = DDIMSampler(model)
@@ -44,7 +46,7 @@ class InferenceInpaint:
         a_prompt = ''
         # n_prompt = 'lowres, bad anatomy, bad hands, cropped, worst quality'
         n_prompt = ''
-        num_samples = 3
+        num_samples = 1
         image_resolution = 512
         ddim_steps = 20
         guess_mode = False
@@ -83,6 +85,13 @@ class InferenceInpaint:
         self.init_model()
         res = self.process(input_image_and_mask, prompt, a_prompt, n_prompt, num_samples, image_resolution, ddim_steps, guess_mode, strength, scale, seed, eta, mask_blur)
         input_image, input_mask, mask_pixel, detected_map, output_images = res 
+        # Save output images to disk
+        infer_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp/infer')
+        os.makedirs(infer_dir, exist_ok=True)
+        for idx, img in enumerate(output_images):
+            img_path = os.path.join(infer_dir, f'{idx}.png')
+            cv2.imwrite(img_path, img)
+
         self.show_pipe_result(
             mask,
             input_image,

@@ -166,6 +166,16 @@ class AnnotationVisualizerGUI:
                 return
         self.selected_bbox_idx = None
         self._hide_annotation_edit_box()
+        # If click is not in any bbox, show original image in matplotlib window
+        import matplotlib.pyplot as plt
+        img_path = self.image_files[self.current_index]
+        orig_img = cv2.imread(img_path)
+        if orig_img is not None:
+            img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
+            plt.figure("Original Image")
+            plt.imshow(img_rgb)
+            plt.axis('off')
+            plt.show()
 
     def _show_image(self):
         img = self._get_annotated_image(self.current_index)
