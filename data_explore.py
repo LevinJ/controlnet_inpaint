@@ -39,6 +39,13 @@ class_id_to_name = {
 
 
 class AnnotationVisualizerGUI:
+
+    def _draw_bbox_with_label(self, image, x1, y1, x2, y2, color, label):
+        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+        cv2.rectangle(image, (x1, y1 - label_size[1] - 10), (x1 + label_size[0], y1), color, -1)
+        cv2.putText(image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        return image
     DISPLAY_W = 1280
     DISPLAY_H = 960
     def __init__(self, images_dir, labels_dir, select_class=None):
@@ -59,6 +66,9 @@ class AnnotationVisualizerGUI:
         self.current_index = 0
         self.selected_bbox_idx = None
         self.annotation_edit_box = None
+        self.use_yolo = False
+        self.yolo_model = None
+        self.filter_yolo = False
 
     def _get_image_files(self):
         image_files = []
@@ -68,6 +78,12 @@ class AnnotationVisualizerGUI:
         return image_files
 
     def _annotate_image(self, image_path):
+        if self.use_yolo:
+            return self._annotate_image_yolo(image_path)
+        else:
+            return self._annotate_image_label(image_path)
+
+    def _annotate_image_label(self, image_path):
         image = cv2.imread(image_path)
         assert image is not None, f"Failed to read image: {image_path}"
         img_height, img_width = image.shape[:2]
@@ -82,11 +98,9 @@ class AnnotationVisualizerGUI:
         for line in lines:
             line = line.strip()
             assert line, "Annotation file contains empty line."
-            
             class_id, x_center, y_center, width, height = map(float, line.split())
-            if self.select_class is  None or int(class_id) in self.select_class:
+            if self.select_class is None or int(class_id) in self.select_class:
                 has_selected_class = True
-            
             self.annotations.append(f"{int(class_id)} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}")
             x_center_px = x_center * img_width
             y_center_px = y_center * img_height
@@ -109,9 +123,102 @@ class AnnotationVisualizerGUI:
                             (x1 + label_size[0], y1), color, -1)
             cv2.putText(image, label, (x1, y1 - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        if not has_selected_class:  
-            return None 
+        if not has_selected_class:
+            return None
         return image
+
+    def _annotate_image_yolo(self, image_path):
+        import torch
+        import cv2
+        import numpy as np
+        # Lazy load YOLO model
+        if self.yolo_model is None:
+            try:
+                from ultralytics import YOLO
+            except ImportError:
+                raise ImportError("ultralytics package is required for YOLO inference. Please install it via 'pip install ultralytics'.")
+            self.yolo_model = YOLO("/media/levin/DATA/checkpoints/Factory/ultralytics/runs/detect/train3/weights/best.pt")
+        image = cv2.imread(image_path)
+        assert image is not None, f"Failed to read image: {image_path}"
+        img_height, img_width = image.shape[:2]
+        results = self.yolo_model(image)
+        boxes = results[0].boxes
+        names = results[0].names if hasattr(results[0], 'names') else self.yolo_model.names
+        gt_boxes, gt_classes = None, None
+        if self.filter_yolo:
+            gt_boxes, gt_classes = self._load_label_boxes(image_path, img_width, img_height)
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            conf = float(box.conf[0])
+            class_id = int(box.cls[0])
+            color = self.class_colors[class_id % len(self.class_colors)]
+            label = f"{names[class_id]} {conf:.2f}"
+            draw = True
+            if self.filter_yolo:
+                pred_box = [x1, y1, x2, y2]
+                # Find nearest GT box by IOU
+                best_iou = 0
+                best_gt_idx = -1
+                for i, gt_box in enumerate(gt_boxes):
+                    iou = self._bbox_iou(pred_box, gt_box)
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_gt_idx = i
+                draw = False
+                reason = ""
+                if best_gt_idx >= 0:
+                    gt_class = gt_classes[best_gt_idx]
+                    if best_iou < 0.5:
+                        draw = True
+                        reason = f"IOU < 0.5 (IOU={best_iou:.3f}) with GT class {gt_class}"
+                    elif class_id != gt_class:
+                        draw = True
+                        reason = f"Class mismatch: pred={class_id} ({names[class_id]}), gt={gt_class}  ({names[gt_class]})"
+                else:
+                    draw = True  # No GT box, always draw
+                    reason = "No GT box found"
+                if draw:
+                    print(f"[YOLO-Filter] Draw box: pred=({x1},{y1},{x2},{y2}), class={class_id} ({names[class_id]}), conf={conf:.2f}, reason: {reason}")
+            if draw:
+                self._draw_bbox_with_label(image, x1, y1, x2, y2, color, label)
+        return image
+
+    def _load_label_boxes(self, image_path, img_width, img_height):
+        label_path = os.path.join(self.labels_dir, Path(image_path).stem + ".txt")
+        boxes = []
+        classes = []
+        if not os.path.exists(label_path):
+            return boxes, classes
+        with open(label_path, 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            class_id, x_center, y_center, width, height = map(float, line.split())
+            x_center_px = x_center * img_width
+            y_center_px = y_center * img_height
+            width_px = width * img_width
+            height_px = height * img_height
+            x1 = int(x_center_px - width_px / 2)
+            y1 = int(y_center_px - height_px / 2)
+            x2 = int(x_center_px + width_px / 2)
+            y2 = int(y_center_px + height_px / 2)
+            boxes.append([x1, y1, x2, y2])
+            classes.append(int(class_id))
+        return boxes, classes
+
+    def _bbox_iou(self, boxA, boxB):
+        # box: [x1, y1, x2, y2]
+        xA = max(boxA[0], boxB[0])
+        yA = max(boxA[1], boxB[1])
+        xB = min(boxA[2], boxB[2])
+        yB = min(boxA[3], boxB[3])
+        interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+        boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+        boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+        iou = interArea / float(boxAArea + boxBArea - interArea + 1e-6)
+        return iou
 
     def _get_annotated_image(self, idx):
         img = self._annotate_image(self.image_files[idx])
@@ -126,6 +233,16 @@ class AnnotationVisualizerGUI:
         self.index_label.pack()
         self.info_label = ttk.Label(self.root, text="", font=("Arial", 10))
         self.info_label.pack(pady=2)
+
+        # Checkbox for YOLO/Label mode and filter
+        self.yolo_var = tk.BooleanVar(value=False)
+        self.filter_yolo_var = tk.BooleanVar(value=False)
+        checkbox_frame = ttk.Frame(self.root)
+        checkbox_frame.pack(pady=5)
+        yolo_checkbox = ttk.Checkbutton(checkbox_frame, text="YOLO Prediction Mode", variable=self.yolo_var, command=self._on_yolo_checkbox)
+        yolo_checkbox.pack(side=tk.LEFT, padx=5)
+        filter_checkbox = ttk.Checkbutton(checkbox_frame, text="Show Only Wrong/Low-IOU Predictions", variable=self.filter_yolo_var, command=self._on_filter_checkbox)
+        filter_checkbox.pack(side=tk.LEFT, padx=5)
 
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(pady=5)
@@ -146,6 +263,17 @@ class AnnotationVisualizerGUI:
         self.root.bind('<Down>', lambda event: self._next_image())
         self._show_image()
         self.root.mainloop()
+
+
+    def _on_filter_checkbox(self):
+        self.filter_yolo = self.filter_yolo_var.get()
+        self.yolo_var.set(True)
+        self.use_yolo = True
+        self._show_image()
+
+    def _on_yolo_checkbox(self):
+        self.use_yolo = self.yolo_var.get()
+        self._show_image()
 
     def _on_canvas_click(self, event):
         # Map click coordinates from displayed image to original image size
