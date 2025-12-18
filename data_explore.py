@@ -69,49 +69,48 @@ class AnnotationVisualizerGUI:
 
     def _annotate_image(self, image_path):
         image = cv2.imread(image_path)
-        if image is None:
-            return None
+        assert image is not None, f"Failed to read image: {image_path}"
         img_height, img_width = image.shape[:2]
         label_path = os.path.join(self.labels_dir, Path(image_path).stem + ".txt")
         self.annotation_file = label_path  # Set annotation file path here
         self.annotations = []
         self.bbox_pixel_coords = []
-        if not os.path.exists(label_path):
-            return image
+        assert os.path.exists(label_path), f"Label file does not exist: {label_path}"
         with open(label_path, 'r') as f:
             lines = f.readlines()
+        has_selected_class = False
         for line in lines:
             line = line.strip()
-            if not line:
-                continue
-            try:
-                class_id, x_center, y_center, width, height = map(float, line.split())
-                if self.select_class is not None and int(class_id) != self.select_class:
-                    continue
-                self.annotations.append(f"{int(class_id)} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}")
-                x_center_px = x_center * img_width
-                y_center_px = y_center * img_height
-                width_px = width * img_width
-                height_px = height * img_height
-                x1 = int(x_center_px - width_px / 2)
-                y1 = int(y_center_px - height_px / 2)
-                x2 = int(x_center_px + width_px / 2)
-                y2 = int(y_center_px + height_px / 2)
-                x1 = max(0, x1)
-                y1 = max(0, y1)
-                x2 = min(img_width - 1, x2)
-                y2 = min(img_height - 1, y2)
-                self.bbox_pixel_coords.append((x1, y1, x2, y2))
-                color = self.class_colors[int(class_id) % len(self.class_colors)]
-                cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
-                label = f"{class_id_to_name[int(class_id)]}"
-                label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                cv2.rectangle(image, (x1, y1 - label_size[1] - 10),
-                              (x1 + label_size[0], y1), color, -1)
-                cv2.putText(image, label, (x1, y1 - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-            except Exception as e:
-                continue
+            assert line, "Annotation file contains empty line."
+            
+            class_id, x_center, y_center, width, height = map(float, line.split())
+            if self.select_class is  None or int(class_id) in self.select_class:
+                has_selected_class = True
+            
+            self.annotations.append(f"{int(class_id)} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}")
+            x_center_px = x_center * img_width
+            y_center_px = y_center * img_height
+            width_px = width * img_width
+            height_px = height * img_height
+            x1 = int(x_center_px - width_px / 2)
+            y1 = int(y_center_px - height_px / 2)
+            x2 = int(x_center_px + width_px / 2)
+            y2 = int(y_center_px + height_px / 2)
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+            x2 = min(img_width - 1, x2)
+            y2 = min(img_height - 1, y2)
+            self.bbox_pixel_coords.append((x1, y1, x2, y2))
+            color = self.class_colors[int(class_id) % len(self.class_colors)]
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+            label = f"{class_id_to_name[int(class_id)]}"
+            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+            cv2.rectangle(image, (x1, y1 - label_size[1] - 10),
+                            (x1 + label_size[0], y1), color, -1)
+            cv2.putText(image, label, (x1, y1 - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        if not has_selected_class:  
+            return None 
         return image
 
     def _get_annotated_image(self, idx):
@@ -180,7 +179,8 @@ class AnnotationVisualizerGUI:
     def _show_image(self):
         img = self._get_annotated_image(self.current_index)
         if img is None:
-            messagebox.showerror("Error", f"Cannot read image: {self.image_files[self.current_index]}")
+            print(f"Skipped image (no selected class): {self.image_files[self.current_index]}")
+            self._next_image()
             return
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(img_rgb)
@@ -253,11 +253,19 @@ class AnnotationVisualizerGUI:
 
 
 if __name__ == "__main__":
-    view_angle = "left"
+    view_angle = "front"  # Options: "front", "side", "bottom"
     # images_directory = f"./data/images/{view_angle}"  # Replace with your image directory
     # labels_directory = f"./data/labels/{view_angle}"  # Replace with your annotation file directory
-    images_directory = f"./data/21.02.2025/{view_angle}"  # Replace with your image directory
-    labels_directory = f"./data/21.02.2025/label/21.02.2025-txt/{view_angle}"  # Replace with your annotation file directory
-    select_class = None  # Or set to an integer class id to filter
+    # batch_folder = f"./data"
+    # batch_date = "21.02.2025"
+
+    batch_folder = f"/media/levin/DATA/checkpoints/controlnet/data/EOL2"
+    # batch_date = "21.02.2025"
+    # batch_date = "20.02.2025"
+    batch_date = "21.02.2025"
+    
+    images_directory = f"{batch_folder}/{batch_date}/{view_angle}"  # Replace with your image directory
+    labels_directory = f"{batch_folder}/{batch_date}/label/{batch_date}-txt/{view_angle}"  # Replace with your annotation file directory
+    select_class = None #[10, 11]  # Or set to an integer class id to filter
     visualizer_gui = AnnotationVisualizerGUI(images_directory, labels_directory, select_class)
     visualizer_gui.run()

@@ -187,8 +187,18 @@ class_id_to_name = {
 
 if __name__ == "__main__":
     # 使用方法
-    images_directory = "./data/images/bottom"  # 替换为你的图像目录
-    labels_directory = "./data/labels/bottom"  # 替换为你的标注文件目录
+    # images_directory = "./data/images/bottom"  # 替换为你的图像目录
+    # labels_directory = "./data/labels/bottom"  # 替换为你的标注文件目录
+    view_angle = "front"  # Options: "front", "side", "bottom"
+    batch_folder = f"/media/levin/DATA/checkpoints/controlnet/data/EOL2"
+    # batch_date = "21.02.2025"
+    batch_date = "20.02.2025"
+    # batch_date = "18.02.2025"
+    
+    images_directory = f"{batch_folder}/{batch_date}/{view_angle}"  # Replace with your image directory
+    labels_directory = f"{batch_folder}/{batch_date}/label/{batch_date}-txt/{view_angle}"  # Replace with your annotation file directory
+
+
     save_directory = './data/data_save/1'
     select_class = int(11)  # 替换为你想要可视化的类别ID
 
