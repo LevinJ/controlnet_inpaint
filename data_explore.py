@@ -67,8 +67,14 @@ class AnnotationVisualizerGUI:
         self.selected_bbox_idx = None
         self.annotation_edit_box = None
         self.use_yolo = False
-        self.yolo_model = None
         self.filter_yolo = False
+        # Pre-load YOLO model for responsiveness
+        try:
+            from ultralytics import YOLO
+            self.yolo_model = YOLO("/media/levin/DATA/checkpoints/Factory/ultralytics/runs/detect/train3/weights/best.pt")
+        except ImportError:
+            self.yolo_model = None
+            print("[Warning] ultralytics package is required for YOLO inference. Please install it via 'pip install ultralytics'.")
 
     def _get_image_files(self):
         image_files = []
@@ -131,13 +137,8 @@ class AnnotationVisualizerGUI:
         import torch
         import cv2
         import numpy as np
-        # Lazy load YOLO model
         if self.yolo_model is None:
-            try:
-                from ultralytics import YOLO
-            except ImportError:
-                raise ImportError("ultralytics package is required for YOLO inference. Please install it via 'pip install ultralytics'.")
-            self.yolo_model = YOLO("/media/levin/DATA/checkpoints/Factory/ultralytics/runs/detect/train3/weights/best.pt")
+            raise ImportError("ultralytics package is required for YOLO inference. Please install it via 'pip install ultralytics'.")
         image = cv2.imread(image_path)
         assert image is not None, f"Failed to read image: {image_path}"
         img_height, img_width = image.shape[:2]
@@ -147,6 +148,7 @@ class AnnotationVisualizerGUI:
         gt_boxes, gt_classes = None, None
         if self.filter_yolo:
             gt_boxes, gt_classes = self._load_label_boxes(image_path, img_width, img_height)
+        has_selected_class = False
         for box in boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             conf = float(box.conf[0])
@@ -178,9 +180,13 @@ class AnnotationVisualizerGUI:
                     draw = True  # No GT box, always draw
                     reason = "No GT box found"
                 if draw:
+                    if self.select_class is None or int(class_id) in self.select_class:
+                        has_selected_class = True
                     print(f"[YOLO-Filter] Draw box: pred=({x1},{y1},{x2},{y2}), class={class_id} ({names[class_id]}), conf={conf:.2f}, reason: {reason}")
             if draw:
                 self._draw_bbox_with_label(image, x1, y1, x2, y2, color, label)
+        if self.filter_yolo and not has_selected_class:
+            return None
         return image
 
     def _load_label_boxes(self, image_path, img_width, img_height):
@@ -224,6 +230,7 @@ class AnnotationVisualizerGUI:
         img = self._annotate_image(self.image_files[idx])
         return img
 
+
     def run(self):
         self.root = tk.Tk()
         self.root.title("Annotation Visualizer")
@@ -234,7 +241,8 @@ class AnnotationVisualizerGUI:
         self.info_label = ttk.Label(self.root, text="", font=("Arial", 10))
         self.info_label.pack(pady=2)
 
-        # Checkbox for YOLO/Label mode and filter
+
+        # Checkbox for YOLO/Label mode and filter, and class selection widgets on the same row
         self.yolo_var = tk.BooleanVar(value=False)
         self.filter_yolo_var = tk.BooleanVar(value=False)
         checkbox_frame = ttk.Frame(self.root)
@@ -243,6 +251,19 @@ class AnnotationVisualizerGUI:
         yolo_checkbox.pack(side=tk.LEFT, padx=5)
         filter_checkbox = ttk.Checkbutton(checkbox_frame, text="Show Only Wrong/Low-IOU Predictions", variable=self.filter_yolo_var, command=self._on_filter_checkbox)
         filter_checkbox.pack(side=tk.LEFT, padx=5)
+        # Class selection widgets to the right of filter_checkbox
+        class_label = ttk.Label(checkbox_frame, text="Select class (comma-separated):")
+        class_label.pack(side=tk.LEFT, padx=2)
+        self.class_entry = ttk.Entry(checkbox_frame, width=20)
+        self.class_entry.pack(side=tk.LEFT, padx=2)
+        # Set initial value
+        if self.select_class is not None:
+            self.class_entry.insert(0, ','.join(str(c) for c in self.select_class))
+        else:
+            self.class_entry.insert(0, "")
+        class_btn = ttk.Button(checkbox_frame, text="Apply", command=self._on_class_entry)
+        class_btn.pack(side=tk.LEFT, padx=2)
+        self.class_entry.bind('<Return>', lambda event: self._on_class_entry())
 
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(pady=5)
@@ -263,6 +284,18 @@ class AnnotationVisualizerGUI:
         self.root.bind('<Down>', lambda event: self._next_image())
         self._show_image()
         self.root.mainloop()
+
+    def _on_class_entry(self):
+        val = self.class_entry.get().strip()
+        if val == "":
+            self.select_class = None
+        else:
+            try:
+                self.select_class = [int(x) for x in val.split(',') if x.strip() != ""]
+            except Exception:
+                messagebox.showerror("Error", "Invalid class list. Please enter comma-separated integers.")
+                return
+        self._show_image()
 
 
     def _on_filter_checkbox(self):
@@ -390,10 +423,10 @@ if __name__ == "__main__":
     batch_folder = f"/media/levin/DATA/checkpoints/controlnet/data/EOL2"
     # batch_date = "21.02.2025"
     # batch_date = "20.02.2025"
-    batch_date = "21.02.2025"
+    batch_date = "18.02.2025"
     
     images_directory = f"{batch_folder}/{batch_date}/{view_angle}"  # Replace with your image directory
     labels_directory = f"{batch_folder}/{batch_date}/label/{batch_date}-txt/{view_angle}"  # Replace with your annotation file directory
-    select_class = None #[10, 11]  # Or set to an integer class id to filter
+    select_class =   [10, 11]
     visualizer_gui = AnnotationVisualizerGUI(images_directory, labels_directory, select_class)
     visualizer_gui.run()
