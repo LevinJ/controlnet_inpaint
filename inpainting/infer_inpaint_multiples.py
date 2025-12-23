@@ -84,9 +84,9 @@ class InferenceInpaintMultiples (InferenceInpaint):
         
         return img_path
     def get_bottom_prompt(self):
-        view_angle = 'bottom'
+        view_angle = 'left'
         img_name = '20250303_163548_9bf8425a-dc21-4449-8b8f-546f277613d7.jpg'
-        image_path = f"./data/images/{view_angle}/{img_name}"
+        image_path = f"./data/21.02.2025/{view_angle}/{img_name}"
         # label_path = f"./data/labels/{view_angle}/{img_name.replace('.jpg', '.txt')}"
 
         mask_prompts = []
@@ -96,17 +96,46 @@ class InferenceInpaintMultiples (InferenceInpaint):
         masks = []
         prompts = []
 
-        prompts.append("Actuator breakage, bottom viewpoint")
+        prompts.append(f"Actuator breakage, {view_angle} viewpoint")
         masks.append([375,549,153,242])
 
-        prompts.append("Guiderod malposed, bottom viewpoint")
+        prompts.append(f"Guiderod malposed, {view_angle} viewpoint")
         masks.append([465,585,244,397])
 
-        prompts.append("Guiderod oil, bottom viewpoint")
+        prompts.append(f"Guiderod oil, {view_angle} viewpoint")
         masks.append([485,606,1254,1418])
 
-        prompts.append("Piston breakage, bottom viewpoint")
+        prompts.append(f"Piston breakage, {view_angle} viewpoint")
         masks.append([693,721,678,965])
+
+        for mask, prompt in zip(masks, prompts):
+            mask_prompts.append((mask, prompt))
+        return image_path, mask_prompts
+    def get_top_prompt(self):
+        view_angle = 'top'
+        image_path = f"./data/21.02.2025/{view_angle}/20250303_163550_5d263bac-949b-4533-9ba8-075ff0dee9f5.jpg"
+
+        mask_prompts = []
+        # mask_prompts.append([[470, 586, 247, 389], "Guiderod malposed, bottom viewpoint"])
+        # mask_prompts.append([[474, 603, 1249, 1412], "Guiderod oil, bottom viewpoint"])
+
+        masks = []
+        prompts = []
+
+        prompts.append(f"Support surface scratch, {view_angle} viewpoint")
+        masks.append([848, 1051, 754, 964])
+
+        prompts.append(f"Support surface scratch, {view_angle} viewpoint")
+        masks.append([828, 1027, 1346, 1557])
+
+        prompts.append(f"Spring variant, {view_angle} viewpoint")
+        masks.append([557, 676, 536, 640])
+
+        prompts.append(f"Actuator pin breakage, {view_angle} viewpoint")
+        masks.append([607, 792, 1724, 1850])
+
+        prompts.append(f"Marker breakage, {view_angle} viewpoint")
+        masks.append([560, 749, 1308, 1618])
 
         for mask, prompt in zip(masks, prompts):
             mask_prompts.append((mask, prompt))
@@ -114,7 +143,8 @@ class InferenceInpaintMultiples (InferenceInpaint):
     def run(self):
         self.init_model()
 
-        image_path, mask_prompts = self.get_bottom_prompt()
+        # image_path, mask_prompts = self.get_bottom_prompt()
+        image_path, mask_prompts = self.get_top_prompt()    
 
         infer_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp/infer/multiples')
         orig_img_path = os.path.join(infer_dir, 'orig.jpg')
